@@ -44,5 +44,42 @@ describe ActionView::Base, "with RSpec extensions:", :type => :view do
       template.render(:partial => "name")
     end
   end
+end
 
+describe "When render_partial has been previously alias_method_chained" do
+  before(:all) do
+    # mess with a copy of ActionView::Base
+    @orig_action_view_base = ActionView::Base
+    ActionView.send :remove_const, :Base
+    ActionView::Base = @orig_action_view_base.clone
+    
+    # set up the alias_method_chain
+    ActionView::Base.class_eval do
+      def render_partial_with_chain(*args)
+        chain_method_called
+      end
+      alias_method_chain :render_partial, :chain
+    end
+    
+    # now run the rspec extension stuff (it has to be after the chain)
+    Kernel.eval File.read(File.join(File.dirname(__FILE__), '../../../lib/spec/rails/extensions/action_view/base.rb'))
+  end
+  
+  describe "#render_partial", :type => :view do
+    before do
+      @view = ActionView::Base.new
+      @view.stub!(:chain_method_called)
+    end
+
+    it "should call the chained method" do
+      @view.should_receive :chain_method_called
+      @view.render_partial('some/partial')
+    end
+  end
+  
+  after(:all) do
+    # set ActionView back to how it was
+    ActionView.send :remove_const, :Base
+    ActionView::Base = @orig_action_view_base
+  end
 end
