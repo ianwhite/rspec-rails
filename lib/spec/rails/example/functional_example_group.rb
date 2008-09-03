@@ -9,7 +9,8 @@ module Spec
         before(:each) do
           @controller_class = Object.path2class @controller_class_name
           raise "Can't determine controller class for #{@controller_class_name}" if @controller_class.nil?
-
+          
+          hide_spec_public_instance_methods_on_controller_class
           @controller = @controller_class.new
           @request = ActionController::TestRequest.new
           @response = ActionController::TestResponse.new
@@ -76,6 +77,21 @@ module Spec
             _assigns_hash_proxy
           else
             _assigns_hash_proxy[key]
+          end
+        end
+        
+      private
+        # any spec modules that have been included must have their public_instance_methods
+        # hidden, otehrwise they will show up as actions on the controller
+        #
+        # We also need to hide up the pretty print methods, if they exist,
+        # including :pretty_inspect added to Kernel
+        def hide_spec_public_instance_methods_on_controller_class
+          Spec::Mocks::Methods.public_instance_methods.each{|m| @controller_class.hide_action(m)}
+          
+          if defined?(PP::ObjectMixin)
+            PP::ObjectMixin.public_instance_methods.each{|m| @controller_class.hide_action(m)}
+            @controller_class.hide_action 'pretty_inspect' # this has been added to Kernel
           end
         end
       end
