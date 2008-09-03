@@ -195,7 +195,14 @@ module Spec
                     @first_render ||= args[0] unless args[0] =~ /^layouts/
                   end
                   
-                  define_method :pick_template do |*args|
+                  # BC branching code: in Rails #6f932b4 :pick_template became :_pick_template
+                  pick_template_method_name = if ::ActionView::Base.instance_methods.include?('_pick_template')
+                    :_pick_template
+                  else
+                    :pick_template
+                  end
+                  
+                  define_method pick_template_method_name do |*args|
                     @_first_render ||= args[0] unless args[0] =~ /^layouts/
                     PickedTemplate.new
                   end
