@@ -158,7 +158,9 @@ module Spec
 
         protected
         def _assigns_hash_proxy
-          @_assigns_hash_proxy ||= AssignsHashProxy.new @controller
+          @_assigns_hash_proxy ||= AssignsHashProxy.new self do
+            @response.template
+          end
         end
 
         private
@@ -193,16 +195,10 @@ module Spec
                 (class << @template; self; end).class_eval do
                   define_method :render_file do |*args|
                     @first_render ||= args[0] unless args[0] =~ /^layouts/
+                    @_first_render ||= args[0] unless args[0] =~ /^layouts/
                   end
                   
-                  # BC branching code: in Rails #6f932b4 :pick_template became :_pick_template
-                  pick_template_method_name = if ::ActionView::Base.instance_methods.include?('_pick_template')
-                    :_pick_template
-                  else
-                    :pick_template
-                  end
-                  
-                  define_method pick_template_method_name do |*args|
+                  define_method :_pick_template do |*args|
                     @_first_render ||= args[0] unless args[0] =~ /^layouts/
                     PickedTemplate.new
                   end
